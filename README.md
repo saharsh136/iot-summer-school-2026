@@ -1,2 +1,11 @@
-# iot-summer-school-2026
-Week-wise assignments, experiments, and the final project completed during IoT Summer School 2026. Focused on IoT development, embedded systems, Arduino/ESP32, sensors, networking, and version control using Git &amp; GitHub.
+## IoT Summer School 2026
+
+Name: SAHARSH MISHRA
+
+Roll Number: 
+
+**Project Description**
+
+This repository contains weekly assignments completed during IoT Summer School 2026.
+It includes practical experiments and learning activities related to IoT.
+The final project demonstrates the application of IoT concepts.
