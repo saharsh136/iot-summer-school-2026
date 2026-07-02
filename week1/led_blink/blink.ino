@@ -1,11 +1,14 @@
+const int LED_PIN = 4;
+const int BLINK_DELAY = 1000; // Delay in milliseconds
+
 void setup() {
-    pinMode(13, OUTPUT);
+    pinMode(LED_PIN, OUTPUT);
 }
 
 void loop() {
-    digitalWrite(13, HIGH);
-    delay(1000);
+    digitalWrite(LED_PIN, HIGH); // Turn LED ON
+    delay(BLINK_DELAY);
 
-    digitalWrite(13, LOW);
-    delay(1000);
+    digitalWrite(LED_PIN, LOW);  // Turn LED OFF
+    delay(BLINK_DELAY);
 }
