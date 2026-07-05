@@ -1,3 +1,15 @@
+/*
+--------------------------------------------------------
+Author      : Saharsh Mishra
+Date        : 05-07-2026
+Version     : v1.3
+Description :
+LED Blink program with:
+- Serial blink counter
+- Potentiometer-controlled blink speed
+--------------------------------------------------------
+*/
+
 const int LED = 13;
 const int POT = A0;
 
