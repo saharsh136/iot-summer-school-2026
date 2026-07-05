@@ -4,15 +4,42 @@ const int doBtn = 2;
 const int reBtn = 3;
 const int miBtn = 4;
 const int faBtn = 5;
+const int modeBtn = 6;
+
+bool majorMode = true;
+bool lastState = HIGH;
+
+int major[] = {262, 294, 330, 349};
+int minor[] = {262, 294, 311, 349};
 
 void setup() {
+
   pinMode(doBtn, INPUT_PULLUP);
   pinMode(reBtn, INPUT_PULLUP);
   pinMode(miBtn, INPUT_PULLUP);
   pinMode(faBtn, INPUT_PULLUP);
+  pinMode(modeBtn, INPUT_PULLUP);
+
+  Serial.begin(9600);
 }
 
 void loop() {
+
+  bool current = digitalRead(modeBtn);
+
+  if (lastState == HIGH && current == LOW) {
+
+    majorMode = !majorMode;
+
+    if (majorMode)
+      Serial.println("Major Mode");
+    else
+      Serial.println("Minor Mode");
+
+    delay(200);
+  }
+
+  lastState = current;
 
   bool d = digitalRead(doBtn) == LOW;
   bool r = digitalRead(reBtn) == LOW;
@@ -23,19 +50,22 @@ void loop() {
 
   if (pressed >= 2) {
     tone(buzzer, 392);
+    return;
   }
 
-  else if (d)
-    tone(buzzer, 262);
+  int *notes = majorMode ? major : minor;
+
+  if (d)
+    tone(buzzer, notes[0]);
 
   else if (r)
-    tone(buzzer, 294);
+    tone(buzzer, notes[1]);
 
   else if (m)
-    tone(buzzer, 330);
+    tone(buzzer, notes[2]);
 
   else if (f)
-    tone(buzzer, 349);
+    tone(buzzer, notes[3]);
 
   else
     noTone(buzzer);
