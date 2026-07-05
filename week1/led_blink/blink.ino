@@ -4,9 +4,7 @@ Author      : Saharsh Mishra
 Date        : 05-07-2026
 Version     : v1.3
 Description :
-LED Blink program with:
-- Serial blink counter
-- Potentiometer-controlled blink speed
+LED Blink with Serial Monitor and Potentiometer Speed Control
 --------------------------------------------------------
 */
 
@@ -22,8 +20,13 @@ void setup() {
 
 void loop() {
 
+  // Read potentiometer value
   int potValue = analogRead(POT);
 
+  // Fix: Constrain the reading to avoid invalid values
+  potValue = constrain(potValue, 0, 1023);
+
+  // Convert potentiometer value to delay (100 ms - 1000 ms)
   int delayTime = map(potValue, 0, 1023, 100, 1000);
 
   digitalWrite(LED, HIGH);
@@ -36,6 +39,7 @@ void loop() {
 
   Serial.print("Blink count: ");
   Serial.print(blinkCount);
-  Serial.print(" | Delay: ");
-  Serial.println(delayTime);
+  Serial.print(", Delay: ");
+  Serial.print(delayTime);
+  Serial.println(" ms");
 }
