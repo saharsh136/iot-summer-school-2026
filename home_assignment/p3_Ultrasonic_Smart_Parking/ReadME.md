@@ -1,5 +1,5 @@
 ## Components
-- Arduino Uno
+- ESP32 DEv Module
 - HC-SR04 Ultrasonic Sensor
 - Active Buzzer
 - Green, Yellow and Red LEDs
