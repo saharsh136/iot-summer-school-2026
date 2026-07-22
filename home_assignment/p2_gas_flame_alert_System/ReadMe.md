@@ -37,3 +37,6 @@ No external libraries required.
 - Gas >60% : Red LED + Continuous Buzzer
 - Flame detected : Red LED + Continuous Buzzer
 - Status is displayed on Serial Monitor.
+
+## Serial_Monitor
+<img width="482" height="372" alt="image" src="https://github.com/user-attachments/assets/95e41328-8e5d-4aad-8cde-24c18fe6d842" />
