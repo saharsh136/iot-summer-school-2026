@@ -1,4 +1,3 @@
-# Project 2 - Gas & Fire Safety Alert System
 
 ## Components
 - Arduino Uno
