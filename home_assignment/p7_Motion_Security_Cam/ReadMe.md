@@ -1,0 +1,42 @@
+## Components
+
+- ESP32
+- PIR Motion Sensor
+- Active Buzzer
+- Red LED
+
+## Connections
+
+### PIR Sensor
+
+- VCC -> 5V
+- GND -> GND
+- OUT -> GPIO13
+
+### Red LED
+
+- GPIO2 -> 220Ω -> LED -> GND
+
+### Buzzer
+
+- (+) -> GPIO14
+- (-) -> GND
+
+## Libraries
+
+No external libraries required.
+
+## Working
+
+- Continuously checks the PIR sensor.
+- When motion is detected:
+  - Red LED turns ON.
+  - Buzzer beeps.
+  - "Motion Detected!" is printed on the Serial Monitor.
+- When no motion is detected:
+  - LED remains OFF.
+  - Buzzer remains OFF.
+ 
+  ## Serial_Monitor
+
+  <img width="322" height="553" alt="image" src="https://github.com/user-attachments/assets/1026f5cb-6cd5-4338-bd48-88c1f8a40473" />
