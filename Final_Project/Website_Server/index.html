@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home Ops Console — Live Telemetry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090c12;
+    --panel: #10141d;
+    --panel-hover: #131826;
+    --border: #1e2530;
+    --border-lit: #2a3444;
+    --text: #e6ecf3;
+    --muted: #626c7e;
+    --faint: #3a4354;
+
+    --cyan: #4fd1ff;
+    --cyan-dim: rgba(79, 209, 255, 0.14);
+    --green: #34e58a;
+    --green-dim: rgba(52, 229, 138, 0.14);
+    --amber: #ffb020;
+    --amber-dim: rgba(255, 176, 32, 0.14);
+    --red: #ff4d5e;
+    --red-dim: rgba(255, 77, 94, 0.16);
+
+    --font-display: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--bg);
+  }
+
+  body {
+    color: var(--text);
+    font-family: var(--font-display);
+    padding: 28px 24px 60px;
+    background-image:
+      linear-gradient(var(--panel) 1px, transparent 1px),
+      linear-gradient(90deg, var(--panel) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-position: center -1px;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 0%, transparent 0%, var(--bg) 78%);
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1040px;
+    margin: 0 auto;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .eyebrow::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .conn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 999px;
+  }
+
+  .conn-led {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    flex-shrink: 0;
+  }
+  .conn-led.live {
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  .alert-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    color: var(--red);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 12px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    animation: alert-glow 1.4s ease-in-out infinite;
+  }
+  .alert-banner.show { display: flex; }
+  .alert-banner .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+    flex-shrink: 0;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+  }
+
+  .node {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+  }
+  .node.danger {
+    border-color: var(--red);
+  }
+
+  .node-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .node-id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 3px;
+  }
+
+  .node-name {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .node-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 5px 11px;
+    border-radius: 999px;
+  }
+  .node-status.online { background: var(--green-dim); color: var(--green); }
+  .node-status.offline { background: rgba(255,255,255,0.04); color: var(--muted); }
+
+  .status-led {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+  }
+  .node-status.online .status-led {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+  .node-status.offline .status-led { background: var(--faint); }
+
+  .node-body { padding: 20px; }
+
+  .override-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .override-btn {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 0;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .override-btn:hover { border-color: var(--border-lit); color: var(--text); }
+  .override-btn:active { transform: scale(0.98); }
+
+  .override-btn.connect.active {
+    background: var(--green-dim);
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .override-btn.disconnect.active {
+    background: var(--red-dim);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .override-note {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--amber);
+    letter-spacing: 0.03em;
+    margin-bottom: 14px;
+    min-height: 14px;
+  }
+
+  .primary-readout {
+    margin-bottom: 18px;
+  }
+  .primary-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .primary-value {
+    font-family: var(--font-mono);
+    font-size: 42px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--cyan);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .primary-value .unit {
+    font-size: 16px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  canvas.spark {
+    display: block;
+    width: 100%;
+    height: 44px;
+    margin-top: 8px;
+  }
+
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .metric-box {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .metric-box-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .metric-box-value {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .metric-box-value.on { color: var(--amber); }
+  .metric-box-value.off { color: var(--muted); }
+  .metric-box-value.danger { color: var(--red); }
+  .metric-box-value.clear { color: var(--green); }
+
+  .status-footer {
+    margin-top: 16px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+  .status-footer.normal { background: var(--green-dim); color: var(--green); }
+  .status-footer.warn { background: var(--amber-dim); color: var(--amber); }
+  .status-footer.danger {
+    background: var(--red-dim);
+    color: var(--red);
+    animation: alert-glow 1.4s ease-in-out infinite;
+  }
+
+  .last-seen {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--faint);
+    text-align: right;
+    margin-top: 12px;
+  }
+
+  footer {
+    margin-top: 32px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--faint);
+    letter-spacing: 0.04em;
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  @keyframes alert-glow {
+    0%, 100% { box-shadow: 0 0 0 rgba(255,77,94,0); }
+    50% { box-shadow: 0 0 18px rgba(255,77,94,0.25); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .conn-led.live, .node-status.online .status-led, .status-footer.danger, .alert-banner {
+      animation: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 20px 14px 40px; }
+    .primary-value { font-size: 34px; }
+    .metrics-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <div class="eyebrow">Live Telemetry</div>
+      <h1>Home Ops Console</h1>
+    </div>
+    <div class="conn">
+      <span class="conn-led" id="connLed"></span>
+      <span id="connText">Connecting…</span>
+    </div>
+  </div>
+
+  <div class="alert-banner" id="alertBanner">
+    <span class="dot"></span>
+    <span id="alertText">EMERGENCY DETECTED</span>
+  </div>
+
+  <div class="grid">
+
+    <!-- NODE 01 — Smart Home -->
+    <div class="node" id="homeNode">
+      <div class="node-head">
+        <div>
+          <div class="node-id">NODE 01</div>
+          <div class="node-name">Smart Home</div>
+        </div>
+        <div class="node-status offline" id="homeStatus">
+          <span class="status-led"></span>
+          <span id="homeStatusText">OFFLINE</span>
+        </div>
+      </div>
+      <div class="node-body">
+
+        <div class="override-row">
+          <button class="override-btn connect" id="homeConnectBtn" onclick="setOverride('home', true)">Connect</button>
+          <button class="override-btn disconnect" id="homeDisconnectBtn" onclick="setOverride('home', false)">Disconnect</button>
+        </div>
+        <div class="override-note" id="homeOverrideNote"></div>
+
+        <div class="primary-readout">
+          <div class="primary-label">Temperature</div>
+          <div class="primary-value"><span id="homeTemp">--</span><span class="unit">°C</span></div>
+          <canvas class="spark" id="homeTempSpark"></canvas>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-box-label">Humidity</div>
+            <div class="metric-box-value" id="homeHum">-- %</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-box-label">Motion</div>
+            <div class="metric-box-value off" id="homeMotion">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-box-label">Fan</div>
+            <div class="metric-box-value off" id="homeFan">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-box-label">Feed rate</div>
+            <div class="metric-box-value" id="homeRate" style="color:var(--muted); font-size:13px;">--</div>
+          </div>
+        </div>
+
+        <div class="last-seen" id="homeLastSeen">Never connected</div>
+      </div>
+    </div>
+
+    <!-- NODE 02 — Gas/Flame -->
+    <div class="node" id="gasNode">
+      <div class="node-head">
+        <div>
+          <div class="node-id">NODE 02</div>
+          <div class="node-name">Fire &amp; Gas Safety</div>
+        </div>
+        <div class="node-status offline" id="gasStatus">
+          <span class="status-led"></span>
+          <span id="gasStatusText">OFFLINE</span>
+        </div>
+      </div>
+      <div class="node-body">
+
+        <div class="override-row">
+          <button class="override-btn connect" id="gasConnectBtn" onclick="setOverride('gas', true)">Connect</button>
+          <button class="override-btn disconnect" id="gasDisconnectBtn" onclick="setOverride('gas', false)">Disconnect</button>
+        </div>
+        <div class="override-note" id="gasOverrideNote"></div>
+
+        <div class="primary-readout">
+          <div class="primary-label">Gas Sensor (MQ2)</div>
+          <div class="primary-value"><span id="gasValue">--</span><span class="unit">raw</span></div>
+          <canvas class="spark" id="gasValueSpark"></canvas>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-box-label">Flame</div>
+            <div class="metric-box-value off" id="gasFlame">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-box-label">Gas leak</div>
+            <div class="metric-box-value off" id="gasLeak">--</div>
+          </div>
+        </div>
+
+        <div class="status-footer normal" id="gasStatusFooter">--</div>
+
+        <div class="last-seen" id="gasLastSeen">Never connected</div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Streaming over WebSocket · no page refresh needed</footer>
+</div>
+
+<script>
+  const connLed = document.getElementById('connLed');
+  const connText = document.getElementById('connText');
+  const alertBanner = document.getElementById('alertBanner');
+  const alertText = document.getElementById('alertText');
+
+  const HISTORY_LEN = 40;
+  const history = { homeTemp: [], gasValue: [] };
+
+  function pushHistory(key, value) {
+    const arr = history[key];
+    arr.push(value);
+    if (arr.length > HISTORY_LEN) arr.shift();
+  }
+
+  function drawSpark(canvasId, key, color) {
+    const canvas = document.getElementById(canvasId);
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (w === 0 || h === 0) return;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    const data = history[key];
+    if (data.length < 2) return;
+
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = (max - min) || 1;
+    const stepX = w / (HISTORY_LEN - 1);
+    const offset = HISTORY_LEN - data.length;
+
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = (offset + i) * stepX;
+      const y = h - 6 - ((v - min) / range) * (h - 12);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    const lastX = (offset + data.length - 1) * stepX;
+    const lastY = h - 6 - ((data[data.length - 1] - min) / range) * (h - 12);
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.fill();
+  }
+
+  function fmtLastSeen(ts) {
+    if (!ts) return 'Never connected';
+    const secs = Math.round((Date.now() - ts) / 1000);
+    if (secs < 2) return 'Updated just now';
+    if (secs < 60) return `Updated ${secs}s ago`;
+    return `Updated ${Math.floor(secs / 60)}m ago`;
+  }
+
+  function renderOverrideButtons(device, enabled) {
+    const connectBtn = document.getElementById(device + 'ConnectBtn');
+    const disconnectBtn = document.getElementById(device + 'DisconnectBtn');
+    const note = document.getElementById(device + 'OverrideNote');
+    connectBtn.classList.toggle('active', enabled);
+    disconnectBtn.classList.toggle('active', !enabled);
+    note.textContent = enabled ? '' : '⏸ Manually disconnected — actuators paused on this board';
+  }
+
+  async function setOverride(device, enabled) {
+    try {
+      await fetch(`/api/control/${device}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      });
+      // UI updates via the WebSocket broadcast that follows
+    } catch (err) {
+      console.error('Override request failed:', err);
+    }
+  }
+
+  function renderHome(home) {
+    const statusEl = document.getElementById('homeStatus');
+    statusEl.className = 'node-status ' + (home.online ? 'online' : 'offline');
+    document.getElementById('homeStatusText').textContent = home.online ? 'ONLINE' : 'OFFLINE';
+    renderOverrideButtons('home', home.enabled !== false);
+
+    document.getElementById('homeTemp').textContent = home.temp !== null ? home.temp.toFixed(1) : '--';
+    document.getElementById('homeHum').textContent = home.hum !== null ? home.hum.toFixed(1) + ' %' : '-- %';
+
+    const motionEl = document.getElementById('homeMotion');
+    motionEl.textContent = home.motion ? 'DETECTED' : 'CLEAR';
+    motionEl.className = 'metric-box-value ' + (home.motion ? 'on' : 'clear');
+
+    const fanEl = document.getElementById('homeFan');
+    fanEl.textContent = home.fan ? 'ON' : 'OFF';
+    fanEl.className = 'metric-box-value ' + (home.fan ? 'on' : 'off');
+
+    document.getElementById('homeRate').textContent = home.online ? '~1 msg/s' : '—';
+
+    if (home.online && home.temp !== null) pushHistory('homeTemp', home.temp);
+    drawSpark('homeTempSpark', 'homeTemp', '#4fd1ff');
+
+    document.getElementById('homeLastSeen').textContent = fmtLastSeen(home.lastSeen);
+  }
+
+  function renderGas(gas) {
+    const statusEl = document.getElementById('gasStatus');
+    statusEl.className = 'node-status ' + (gas.online ? 'online' : 'offline');
+    document.getElementById('gasStatusText').textContent = gas.online ? 'ONLINE' : 'OFFLINE';
+    renderOverrideButtons('gas', gas.enabled !== false);
+
+    document.getElementById('gasValue').textContent = gas.gasValue !== null ? gas.gasValue : '--';
+
+    const flameEl = document.getElementById('gasFlame');
+    flameEl.textContent = gas.flame ? 'DETECTED' : 'CLEAR';
+    flameEl.className = 'metric-box-value ' + (gas.flame ? 'danger' : 'clear');
+
+    const leakEl = document.getElementById('gasLeak');
+    leakEl.textContent = gas.gasLeak ? 'DETECTED' : 'CLEAR';
+    leakEl.className = 'metric-box-value ' + (gas.gasLeak ? 'danger' : 'clear');
+
+    const footer = document.getElementById('gasStatusFooter');
+    footer.textContent = gas.status || '--';
+
+    const node = document.getElementById('gasNode');
+    const isDanger = gas.flame || gas.gasLeak;
+    node.classList.toggle('danger', isDanger);
+    footer.className = 'status-footer ' + (isDanger ? 'danger' : 'normal');
+
+    if (gas.online && gas.gasValue !== null) pushHistory('gasValue', gas.gasValue);
+    drawSpark('gasValueSpark', 'gasValue', isDanger ? '#ff4d5e' : '#4fd1ff');
+
+    document.getElementById('gasLastSeen').textContent = fmtLastSeen(gas.lastSeen);
+
+    if (gas.online && isDanger) {
+      alertBanner.classList.add('show');
+      alertText.textContent = gas.flame && gas.gasLeak
+        ? 'EMERGENCY: FLAME + GAS LEAK DETECTED — CHECK NODE 02'
+        : gas.flame ? 'EMERGENCY: FLAME DETECTED — CHECK NODE 02' : 'WARNING: GAS LEAK DETECTED — CHECK NODE 02';
+    } else {
+      alertBanner.classList.remove('show');
+    }
+  }
+
+  function applyState(state) {
+    renderHome(state.home);
+    renderGas(state.gas);
+  }
+
+  let lastState = null;
+  setInterval(() => { if (lastState) applyState(lastState); }, 1000);
+  window.addEventListener('resize', () => { if (lastState) applyState(lastState); });
+
+  function connect() {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${location.host}/ws`);
+
+    ws.onopen = () => {
+      connLed.classList.add('live');
+      connText.textContent = 'Live';
+    };
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      lastState = msg.state;
+      applyState(msg.state);
+    };
+
+    ws.onclose = () => {
+      connLed.classList.remove('live');
+      connText.textContent = 'Disconnected — retrying…';
+      setTimeout(connect, 1500);
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  fetch('/api/state').then(r => r.json()).then(state => {
+    lastState = state;
+    applyState(state);
+  }).catch(() => {});
+
+  connect();
+</script>
+</body>
+</html>
